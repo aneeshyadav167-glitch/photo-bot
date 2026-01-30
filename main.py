@@ -5,7 +5,7 @@ from flask import Flask
 from threading import Thread
 
 TOKEN = "7859979144: AAEqpEEvtx-2hTtkLcWsydUDSo
-VLTTtIRyw"
+"VLTTtIRyw"
 
 bot = telebot.TeleBot(TOKEN)
 
@@ -24,7 +24,7 @@ def keep_alive():
 
 @bot.message_handler(commands=['start'])
 def start(msg):
-    bot.send_message(msg.chat.id,"Hi! Photo bhejo 📸")
+    bot.send_message(msg.chat.id,"Hi! Photo bhejo ")
 
 @bot.message_handler(content_types=['photo'])
 def photo(msg):
