@@ -1,10 +1,10 @@
 import telebot
 from PIL import Image
-import os
+import os  # Yeh zaroori hai
 from flask import Flask
 from threading import Thread
 
-# TOKEN ko sahi format mein ek line mein rakha hai
+# TOKEN bilkul sahi hai
 TOKEN = "7859979144:AAEqpEEvtx-2hTtkLcWsydUDSoVLTTtIRyw"
 
 bot = telebot.TeleBot(TOKEN)
@@ -15,7 +15,7 @@ def home():
     return "Bot is running"
 
 def run():
-    # Render ke liye dynamic port zaroori hai
+    # Render ke liye dynamic port settings
     port = int(os.environ.get("PORT", 10000))
     app.run(host='0.0.0.0', port=port)
 
@@ -49,7 +49,8 @@ def photo(msg):
     except Exception as e:
         print(f"Error: {e}")
 
-# Bot ko start karne ki command
+# Sabse important: Bot ko start karna
 if __name__ == "__main__":
     keep_alive()
+    print("Bot is starting...")
     bot.polling(non_stop=True)
