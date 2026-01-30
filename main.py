@@ -5,7 +5,7 @@ from flask import Flask
 from threading import Thread
 
 # TOKEN bilkul sahi hai
-TOKEN = "7859979144:AAEqpEEvtx-2hTtkLcWsydUDSoVLTTtIRyw"
+TOKEN = "7859979144:AAEqpEEvtx-2hTtkLcWsydUDSovLTTtlRyw"
 
 bot = telebot.TeleBot(TOKEN)
 app = Flask('')
