@@ -1,3 +1,7 @@
 pyTelegramBotAPI
-Flask
+replicate
+opencv-python-headless
+numpy
 Pillow
+flask
+requests
