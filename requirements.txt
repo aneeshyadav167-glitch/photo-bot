@@ -1,5 +1,4 @@
 pyTelegramBotAPI
-replicate
 opencv-python-headless
 numpy
 Pillow
