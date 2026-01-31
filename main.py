@@ -1,18 +1,24 @@
 import telebot
-from PIL import Image, ImageEnhance, ImageFilter 
+import replicate
+import cv2
+import numpy as np
 import os
+import requests
+from PIL import Image, ImageEnhance, ImageFilter
 from flask import Flask
 from threading import Thread
 
-# Token ekdam sahi hona chahiye
+# --- CONFIGURATION ---
 TOKEN = "8416936551:AAFmNH1lpMv7md0GW9FkSWIarPo-dQsZmmw"
+# Yahan apni Replicate API Key paste karein
+os.environ["REPLICATE_API_TOKEN"] = "PASTE_YOUR_REPLICATE_KEY_HERE"
 
 bot = telebot.TeleBot(TOKEN)
 app = Flask('')
 
 @app.route('/')
 def home():
-    return "Bot is running"
+    return "iPhone AI Bot is running"
 
 def run():
     port = int(os.environ.get("PORT", 10000))
@@ -22,51 +28,71 @@ def keep_alive():
     t = Thread(target=run)
     t.start()
 
+# --- IPHONE VIVID & TEXTURE FILTER (OpenCV) ---
+def apply_iphone_vivid(img_path):
+    img = cv2.imread(img_path)
+    
+    # 1. Saturation badhana (Vivid Look)
+    hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV).astype("float32")
+    hsv[:, :, 1] *= 1.25  # 25% extra saturation
+    hsv = np.clip(hsv, 0, 255).astype("uint8")
+    img = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
+    
+    cv2.imwrite("temp_vivid.jpg", img)
+    return "temp_vivid.jpg"
+
 @bot.message_handler(commands=['start'])
 def start(msg):
-    bot.send_message(msg.chat.id, "Hi! Photo bhejo, main use Original Size aur High Texture mein convert kar dunga.")
+    bot.send_message(msg.chat.id, "✨ *iPhone AI Editor Ready!*\n\nBhejiye apni photo, main use:\n✅ OpenCV Vivid Filter\n✅ AI 4K Upscale\n✅ High Texture Skin\n\nmein badal dunga!", parse_mode="Markdown")
 
 @bot.message_handler(content_types=['photo'])
 def photo(msg):
     try:
-        # User se photo lena
+        status_msg = bot.reply_to(msg, "🪄 Processing... iPhone Filters + AI 4K Scaling apply ho raha hai.")
+        
+        # Photo download karna
         file_id = msg.photo[-1].file_id
-        file = bot.get_file(file_id)
-        data = bot.download_file(file.file_path)
-
-        with open("in.jpg", "wb") as f:
-            f.write(data)
-
-        img = Image.open("in.jpg")
-
-        # --- Yahan Quality aur Texture badhaya gaya hai ---
+        file_info = bot.get_file(file_id)
+        photo_url = f"https://api.telegram.org/file/bot{TOKEN}/{file_info.file_path}"
         
-        # 1. Sharpness (Skin texture ko ubharne ke liye)
-        sharp_enhancer = ImageEnhance.Sharpness(img)
-        img = sharp_enhancer.enhance(2.5) # Texture ko thoda hard kiya
+        # --- STEP 1: AI 4K Upscale (Replicate) ---
+        # Ye background mein photo ko 4x bada aur clean karega
+        output_url = replicate.run(
+            "nightmare-ai/real-esrgan:42fed1c4974cc6b73a469f3c1212903333333333",
+            input={
+                "image": photo_url,
+                "upscale": 4, 
+                "face_enhance": True
+            }
+        )
 
-        # 2. Detail Filter (Barikiyaan dikhane ke liye)
-        img = img.filter(ImageFilter.DETAIL)
+        # AI processed photo download karna filter ke liye
+        processed_data = requests.get(output_url).content
+        with open("ai_out.jpg", "wb") as f:
+            f.write(processed_data)
 
-        # 3. Contrast (Colors ko crispy banane ke liye)
-        con_enhancer = ImageEnhance.Contrast(img)
-        img = con_enhancer.enhance(1.15)
+        # --- STEP 2: OpenCV iPhone Vivid Filter ---
+        vivid_path = apply_iphone_vivid("ai_out.jpg")
 
-        # 4. Save (Quality=100 se original resolution maintain rahega)
-        img.save("out.jpg", quality=100, subsampling=0)
+        # --- STEP 3: Pillow Texture & Sharpness Enhancement ---
+        img = Image.open(vivid_path)
+        img = ImageEnhance.Sharpness(img).enhance(2.0) # Texture pop-up
+        img = ImageEnhance.Contrast(img).enhance(1.1)
+        img.save("final_output.jpg", quality=100, subsampling=0)
 
-        with open("out.jpg", "rb") as f:
-            bot.send_photo(msg.chat.id, f, caption="✅ Original Resolution + Texture Applied!")
+        # User ko final photo bhejna
+        with open("final_output.jpg", "rb") as f:
+            bot.send_photo(msg.chat.id, f, caption="🚀 *4K Ultra HD + iPhone Vivid Applied!*")
 
-        # Safayi (Server space ke liye)
-        os.remove("in.jpg")
-        os.remove("out.jpg")
-        
+        # Cleanup
+        bot.delete_message(msg.chat.id, status_msg.message_id)
+        for f in ["ai_out.jpg", "temp_vivid.jpg", "final_output.jpg"]:
+            if os.path.exists(f): os.remove(f)
+
     except Exception as e:
         print(f"Error: {e}")
-        bot.send_message(msg.chat.id, "Photo process karne mein koi problem aayi.")
+        bot.send_message(msg.chat.id, "Sorry, AI processing mein error aaya. API key check karein.")
 
 if __name__ == "__main__":
     keep_alive()
-    print("Bot is starting...")
     bot.polling(non_stop=True)
